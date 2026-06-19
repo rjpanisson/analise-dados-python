@@ -76,4 +76,85 @@ ax.set_title("OEE por Injetora", fontsize=13, fontweight="bold")
 ax.legend()
 for bar, val in zip(bars, oee_injetora["oee"]):
     ax.text(bar.get_width() + 0.5, bar.get_y() + bar.get_height() / 2,
-            f"{val:.1f}%", va="center",
+            f"{val:.1f}%", va="center", fontsize=9)
+plt.tight_layout()
+plt.savefig("oee_por_injetora.png", dpi=150)
+plt.show()
+print("Gráfico salvo: oee_por_injetora.png")
+
+
+# ============================================================
+# 3. EVOLUÇÃO SEMANAL DO % DE PERDA
+# ============================================================
+
+perda_semanal = (
+    dados.groupby("semana")
+    .agg(total_perdas=("pecas_perdidas", "sum"),
+         total_produzido=("producao_teorica", "sum"))
+    .assign(pct_perda=lambda x: x["total_perdas"] / x["total_produzido"] * 100)
+    .reset_index()
+)
+
+fig, ax = plt.subplots()
+ax.plot(perda_semanal["semana"], perda_semanal["pct_perda"],
+        marker="o", color="#2C5F9E", linewidth=2, label="% Perda")
+ax.axhline(12, color="red", linestyle="--", linewidth=1.5, label="Meta (12%)")
+ax.fill_between(perda_semanal["semana"], perda_semanal["pct_perda"], 12,
+                where=perda_semanal["pct_perda"] > 12,
+                alpha=0.2, color="red", label="Acima da meta")
+ax.set_xlabel("Semana")
+ax.set_ylabel("% de Perda")
+ax.set_title("Evolução Semanal do % de Perda", fontsize=13, fontweight="bold")
+ax.legend()
+plt.tight_layout()
+plt.savefig("evolucao_perda_semanal.png", dpi=150)
+plt.show()
+print("Gráfico salvo: evolucao_perda_semanal.png")
+
+
+# ============================================================
+# 4. RANKING DE OPERADORES POR OEE
+# ============================================================
+
+oee_operador = (
+    dados.groupby("operador")["oee"]
+    .mean()
+    .mul(100)
+    .round(2)
+    .reset_index()
+    .sort_values("oee", ascending=True)
+)
+
+fig, ax = plt.subplots()
+bars = ax.barh(oee_operador["operador"], oee_operador["oee"],
+               color=["#2C5F9E" if v >= 65 else "#E74C3C" for v in oee_operador["oee"]])
+ax.axvline(65, color="orange", linestyle="--", linewidth=1.5, label="Meta (65%)")
+ax.set_xlabel("OEE (%)")
+ax.set_title("OEE por Operador", fontsize=13, fontweight="bold")
+ax.legend()
+for bar, val in zip(bars, oee_operador["oee"]):
+    ax.text(bar.get_width() + 0.3, bar.get_y() + bar.get_height() / 2,
+            f"{val:.1f}%", va="center", fontsize=9)
+plt.tight_layout()
+plt.savefig("oee_por_operador.png", dpi=150)
+plt.show()
+print("Gráfico salvo: oee_por_operador.png")
+
+
+# ============================================================
+# 5. HEATMAP — CORRELAÇÃO ENTRE INDICADORES
+# ============================================================
+
+correlacao = dados[["disponibilidade", "performance", "aproveitamento",
+                     "oee", "pct_perda", "horas_parada"]].corr()
+
+fig, ax = plt.subplots(figsize=(8, 6))
+sns.heatmap(correlacao, annot=True, fmt=".2f", cmap="coolwarm",
+            linewidths=0.5, ax=ax, vmin=-1, vmax=1)
+ax.set_title("Correlação entre Indicadores de Produção", fontsize=13, fontweight="bold")
+plt.tight_layout()
+plt.savefig("correlacao_indicadores.png", dpi=150)
+plt.show()
+print("Gráfico salvo: correlacao_indicadores.png")
+
+print("\n✅ Análise concluída! Todos os gráficos foram salvos.")
